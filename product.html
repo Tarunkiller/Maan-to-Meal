@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .product-detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      padding: 2rem;
+      align-items: start;
+    }
+    .product-img-panel {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .product-img-panel img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+    }
+    .product-info-panel {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 2rem;
+    }
+    .product-category {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--primary-light);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .product-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .product-price {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+    .product-price span {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+    .badge-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .meta-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .meta-item label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .meta-item span {
+      font-weight: 600;
+    }
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--glass-border);
+    }
+    .qty-select {
+      display: flex;
+      align-items: center;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .qty-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+    .qty-btn:hover { background: rgba(255,255,255,0.05); }
+    .qty-input {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      width: 50px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      outline: none;
+    }
+    .reviews-section {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+    .review-item {
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .review-item:last-child { border-bottom: none; }
+    .review-author { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .review-date { font-size: 0.8rem; color: var(--text-muted); margin-left: auto; }
+    @media(max-width: 900px) {
+      .product-detail-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<nav class="navbar">
+  <a href="/frontend/index.html" class="navbar-brand"><span class="brand-icon">🌾</span><span>Maan-Meal</span></a>
+  <div style="flex:1;max-width:400px;margin:0 1rem">
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search products..." onkeypress="handleSearch(event)">
+      <button onclick="doSearch()">🔍</button>
+    </div>
+  </div>
+  <div class="navbar-actions">
+    <div class="relative" id="nav-user-menu" style="display:none;align-items:center;gap:0.5rem">
+      <div class="relative" style="display:inline-block">
+        <a href="/frontend/consumer/cart.html"><button class="btn btn-ghost btn-sm btn-icon" style="position:relative">🛒<span class="cart-badge" id="cart-count" style="display:none">0</span></button></a>
+      </div>
+      <span id="nav-user-name" style="font-weight:600;font-size:0.9rem;color:var(--primary-light)"></span>
+      <button class="btn btn-ghost btn-sm" id="nav-logout">Logout</button>
+    </div>
+    <a href="/frontend/auth/login.html" id="nav-login"><button class="btn btn-ghost btn-sm">Login</button></a>
+    <a href="/frontend/auth/signup.html" id="nav-signup"><button class="btn btn-primary btn-sm">Sign Up</button></a>
+  </div>
+</nav>
+
+<div class="container" style="margin-top: 2rem;">
+  <button class="btn btn-ghost btn-sm mb-4" onclick="history.back()">← Back to browse</button>
+
+  <div class="product-detail-layout" id="product-detail-wrap">
+    <!-- Shimmer placeholders while loading -->
+    <div class="skeleton" style="height:450px;border-radius:var(--radius-md)"></div>
+    <div class="skeleton" style="height:450px;border-radius:var(--radius-md)"></div>
+  </div>
+
+  <div class="reviews-section" id="reviews-section-wrap">
+    <h3>Ratings & Reviews</h3>
+    <div class="skeleton mt-3" style="height:200px;border-radius:var(--radius-md)"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const productId = urlParams.get('id');
+
+  if (!productId) {
+    window.location.href = '/frontend/consumer/browse.html';
+  }
+
+  function handleSearch(e) {
+    if (e.key === 'Enter') doSearch();
+  }
+  function doSearch() {
+    const q = document.getElementById('search-input').value.trim();
+    if (q) window.location.href = `/frontend/consumer/browse.html?search=${encodeURIComponent(q)}`;
+  }
+
+  let product = null;
+
+  async function loadProduct() {
+    try {
+      product = await Api.get(`/products/${productId}`);
+      
+      const wrap = document.getElementById('product-detail-wrap');
+      wrap.innerHTML = `
+        <div class="product-img-panel">
+          <img src="${product.image_url || '/frontend/static/uploads/default_product.jpg'}" alt="${product.name}" onerror="this.src='/frontend/static/uploads/default_product.jpg'">
+        </div>
+        <div class="product-info-panel">
+          <div class="product-category">${product.category}</div>
+          <h1 class="product-title">${product.name}</h1>
+          <div class="product-price">${Fmt.currency(product.price_per_unit)}<span>/${product.unit}</span></div>
+
+          <div class="badge-row">
+            ${product.is_organic ? '<span class="badge badge-success">🌿 Organic</span>' : '<span class="badge badge-primary">Standard Grade</span>'}
+            <span class="badge badge-info">${product.quality_grade} Grade</span>
+            <span class="badge badge-warning">⭐ ${product.rating || 0} (${product.total_reviews || 0} reviews)</span>
+          </div>
+
+          <div class="meta-row">
+            <div class="meta-item">
+              <label>Farmer Name</label>
+              <span>🌾 ${product.farmer_name || 'Farm Fresh'}</span>
+            </div>
+            <div class="meta-item">
+              <label>Location</label>
+              <span>📍 ${product.location || 'Maharashtra'}</span>
+            </div>
+            <div class="meta-item">
+              <label>Stock Available</label>
+              <span>📦 ${product.stock_qty} ${product.unit}s left</span>
+            </div>
+            <div class="meta-item">
+              <label>Harvest Date</label>
+              <span>📅 ${Fmt.date(product.harvest_date)}</span>
+            </div>
+          </div>
+
+          <p style="color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem">${product.description || 'Farm fresh high quality product directly delivered from the farmers without middlemen.'}</p>
+
+          <div class="action-row">
+            <div class="qty-select">
+              <button class="qty-btn" onclick="updateQty(-1)">−</button>
+              <input type="text" id="qty-input" class="qty-input" value="1" readonly>
+              <button class="qty-btn" onclick="updateQty(1)">+</button>
+            </div>
+            <button class="btn btn-accent" style="flex:1" onclick="addToCart()">🛒 Add to Cart</button>
+          </div>
+        </div>
+      `;
+
+      // Render Reviews
+      const revWrap = document.getElementById('reviews-section-wrap');
+      if (!product.reviews || !product.reviews.length) {
+        revWrap.innerHTML = `<h3>Ratings & Reviews</h3><div class="empty-state mt-3" style="padding:1.5rem"><div class="empty-icon">⭐</div><p>No reviews for this product yet.</p></div>`;
+      } else {
+        let revHtml = `<h3>Ratings & Reviews</h3><div style="margin-top: 1.25rem;">`;
+        product.reviews.forEach(r => {
+          revHtml += `
+            <div class="review-item">
+              <div class="review-author">
+                <span>👤</span>
+                <span>${r.consumer_name || 'Anonymous Consumer'}</span>
+                <span style="color:var(--accent)">${Fmt.stars(r.rating)}</span>
+                <span class="review-date">${Fmt.timeAgo(r.created_at)}</span>
+              </div>
+              <p style="color:var(--text-secondary);margin-top:0.5rem;font-size:0.92rem">${r.comment || 'No comment provided.'}</p>
+            </div>
+          `;
+        });
+        revHtml += `</div>`;
+        revWrap.innerHTML = revHtml;
+      }
+
+    } catch (e) {
+      document.getElementById('product-detail-wrap').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><h3>Could not load product details</h3><p>${e.message}</p></div>`;
+    }
+  }
+
+  function updateQty(delta) {
+    const el = document.getElementById('qty-input');
+    let v = parseInt(el.value) + delta;
+    if (v < 1) v = 1;
+    if (product && v > product.stock_qty) v = Math.floor(product.stock_qty);
+    el.value = v;
+  }
+
+  async function addToCart() {
+    if (!Auth.isLoggedIn()) {
+      Toast.show('Please login to add items to cart', 'warning');
+      setTimeout(() => window.location.href = '/frontend/auth/login.html', 1200);
+      return;
+    }
+    if (Auth.getRole() !== 'consumer') { Toast.show('Only consumers can add to cart', 'warning'); return; }
+
+    const qty = parseInt(document.getElementById('qty-input').value);
+
+    try {
+      await Api.post('/consumer/cart', { product_id: productId, quantity: qty });
+      Toast.show(`${product.name} added to cart! 🛒`, 'success');
+      updateCartCount();
+    } catch(e) { Toast.show(e.message, 'error'); }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadProduct);
+</script>
+</body>
+</html>

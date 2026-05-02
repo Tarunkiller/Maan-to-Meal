@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .checkout-layout{display:grid;grid-template-columns:1fr 400px;gap:2rem;align-items:start;padding:2rem}
+    .payment-option{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--glass);border:1.5px solid var(--glass-border);border-radius:var(--radius-md);cursor:pointer;transition:var(--transition);margin-bottom:0.75rem}
+    .payment-option.selected{border-color:var(--primary-light);background:rgba(82,183,136,0.1)}
+    .payment-option input[type=radio]{accent-color:var(--primary-light)}
+    .payment-icon{font-size:1.8rem;width:48px;text-align:center}
+    .upi-field{margin-top:1rem;display:none}
+    .upi-field.show{display:block}
+    .qr-modal{text-align:center}
+    .qr-box{background:white;padding:1.5rem;border-radius:var(--radius-md);display:inline-block;margin:1rem auto}
+    @media(max-width:900px){.checkout-layout{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<nav class="navbar">
+  <a href="/frontend/index.html" class="navbar-brand"><span class="brand-icon">🌾</span><span>Maan-Meal</span></a>
+  <div class="navbar-nav">
+    <a href="/frontend/consumer/cart.html" class="nav-link">← Back to Cart</a>
+  </div>
+  <div class="navbar-actions">
+    <span id="nav-user-name" style="font-weight:600;font-size:0.9rem;color:var(--primary-light)"></span>
+    <button class="btn btn-ghost btn-sm" id="nav-logout">Logout</button>
+  </div>
+</nav>
+
+<div class="container checkout-layout" style="max-width:100%">
+  <!-- Left: Address + Payment -->
+  <div>
+    <!-- Delivery Address -->
+    <div class="card mb-3">
+      <h2 style="font-weight:800;margin-bottom:1.5rem;font-size:1.2rem">📍 Delivery Address</h2>
+      <div class="form-group">
+        <label class="form-label">Full Delivery Address *</label>
+        <textarea id="delivery-address" class="form-control" rows="3" placeholder="House/Flat No., Street, City, State, PIN" required></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery Notes (optional)</label>
+        <input type="text" id="delivery-notes" class="form-control" placeholder="Landmark, gate code, preferred time...">
+      </div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="card">
+      <h2 style="font-weight:800;margin-bottom:1.5rem;font-size:1.2rem">💳 Payment Method</h2>
+
+      <div class="payment-option selected" onclick="selectPayment('upi')" id="pay-upi">
+        <input type="radio" name="payment" value="upi" checked>
+        <span class="payment-icon">📱</span>
+        <div>
+          <div style="font-weight:700">UPI Payment</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">GPay, PhonePe, Paytm, BHIM</div>
+        </div>
+      </div>
+
+      <div class="upi-field show" id="upi-details">
+        <div class="form-group">
+          <label class="form-label">UPI ID</label>
+          <input type="text" id="upi-id" class="form-control" placeholder="yourname@upi" value="demo@upi">
+        </div>
+        <div style="background:rgba(82,183,136,0.1);border:1px solid rgba(82,183,136,0.2);border-radius:8px;padding:0.75rem;font-size:0.82rem">
+          <div style="font-weight:600;color:var(--primary-light);margin-bottom:4px">🔒 Secure UPI Payment</div>
+          <div style="color:var(--text-muted)">A QR code will be shown for payment confirmation</div>
+        </div>
+      </div>
+
+      <div class="payment-option" onclick="selectPayment('card')" id="pay-card">
+        <input type="radio" name="payment" value="card">
+        <span class="payment-icon">💳</span>
+        <div>
+          <div style="font-weight:700">Credit / Debit Card</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">Visa, Mastercard, RuPay</div>
+        </div>
+      </div>
+
+      <div class="upi-field" id="card-details">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Card Number</label>
+            <input type="text" id="card-number" class="form-control" placeholder="4242 4242 4242 4242" maxlength="19" oninput="formatCard(this)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Name on Card</label>
+            <input type="text" id="card-name" class="form-control" placeholder="Your Name">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Expiry</label>
+            <input type="text" id="card-expiry" class="form-control" placeholder="MM/YY" maxlength="5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">CVV</label>
+            <input type="password" id="card-cvv" class="form-control" placeholder="•••" maxlength="4">
+          </div>
+        </div>
+      </div>
+
+      <div class="payment-option" onclick="selectPayment('cod')" id="pay-cod">
+        <input type="radio" name="payment" value="cod">
+        <span class="payment-icon">💵</span>
+        <div>
+          <div style="font-weight:700">Cash on Delivery</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">Pay when you receive</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Order Summary -->
+  <div>
+    <div class="card" style="position:sticky;top:90px">
+      <h3 style="font-weight:700;margin-bottom:1rem">Order Review</h3>
+      <div id="checkout-items" style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1rem"></div>
+      <div class="divider"></div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;margin:1rem 0">
+        <div style="display:flex;justify-content:space-between;font-size:0.9rem">
+          <span style="color:var(--text-muted)">Subtotal</span>
+          <span id="checkout-subtotal">₹0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.9rem">
+          <span style="color:var(--text-muted)">Delivery</span>
+          <span style="color:var(--success)">Free</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;font-size:1.2rem;font-weight:800;margin:1rem 0">
+        <span>Total</span>
+        <span id="checkout-total" style="color:var(--harvest)">₹0</span>
+      </div>
+      <div style="background:rgba(82,183,136,0.1);border:1px solid rgba(82,183,136,0.2);border-radius:8px;padding:0.75rem;font-size:0.8rem;color:var(--primary-light);margin-bottom:1.25rem">
+        ⚡ Expected delivery within <strong>24 hours</strong> of placing order
+      </div>
+      <button class="btn btn-accent btn-full btn-lg" id="place-order-btn" onclick="placeOrder()">
+        🌾 Place Order
+      </button>
+      <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem">
+        🔒 Secure & Encrypted Payment
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- QR Payment Modal -->
+<div class="modal-overlay hidden" id="qr-modal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <h3 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.5rem">Scan to Pay</h3>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.5rem">Scan this QR with any UPI app</p>
+    <div class="qr-box">
+      <canvas id="qr-canvas" width="200" height="200"></canvas>
+    </div>
+    <div style="font-size:1.2rem;font-weight:800;margin:1rem 0;color:var(--harvest)" id="qr-amount"></div>
+    <div style="color:var(--text-muted);font-size:0.82rem;margin-bottom:1.5rem">UPI: maanmeal@upi</div>
+    <button class="btn btn-primary btn-full" onclick="confirmQRPayment()">✅ I have paid</button>
+    <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="document.getElementById('qr-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (!Auth.requireRole('consumer')) {}
+
+  let selectedPayment = 'upi';
+  let cartData = null;
+
+  async function loadCheckout() {
+    const user = Auth.getUser();
+    if (user && user.address) document.getElementById('delivery-address').value = user.address;
+    try {
+      cartData = await Api.get('/consumer/cart');
+      if (!cartData.items.length) { window.location.href = '/frontend/consumer/cart.html'; return; }
+      renderCheckoutItems(cartData);
+    } catch(e) { Toast.show('Failed to load cart', 'error'); }
+  }
+
+  function renderCheckoutItems(data) {
+    const cont = document.getElementById('checkout-items');
+    cont.innerHTML = data.items.map(item => {
+      const p = item.product;
+      if (!p) return '';
+      return `<div style="display:flex;align-items:center;gap:0.75rem">
+        <img src="${p.image_url}" style="width:48px;height:48px;object-fit:cover;border-radius:8px" onerror="this.src='/frontend/static/uploads/default_product.jpg'">
+        <div style="flex:1"><div style="font-size:0.88rem;font-weight:600">${p.name}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted)">Qty: ${item.quantity} ${p.unit}</div></div>
+        <div style="font-weight:700;font-size:0.9rem">${Fmt.currency(p.price_per_unit * item.quantity)}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('checkout-subtotal').textContent = Fmt.currency(data.total);
+    document.getElementById('checkout-total').textContent = Fmt.currency(data.total);
+  }
+
+  function selectPayment(method) {
+    selectedPayment = method;
+    ['upi','card','cod'].forEach(m => {
+      document.getElementById(`pay-${m}`).classList.toggle('selected', m === method);
+      document.querySelector(`#pay-${m} input`).checked = m === method;
+    });
+    document.getElementById('upi-details').classList.toggle('show', method === 'upi');
+    document.getElementById('card-details').classList.toggle('show', method === 'card');
+  }
+
+  function formatCard(el) {
+    let v = el.value.replace(/\D/g, '').substring(0, 16);
+    el.value = v.replace(/(.{4})/g, '$1 ').trim();
+  }
+
+  async function placeOrder() {
+    const addr = document.getElementById('delivery-address').value.trim();
+    if (!addr) { Toast.show('Please enter delivery address', 'warning'); return; }
+
+    if (selectedPayment === 'upi') {
+      // Show QR modal
+      document.getElementById('qr-amount').textContent = cartData ? Fmt.currency(cartData.total) : '';
+      drawQR();
+      document.getElementById('qr-modal').classList.remove('hidden');
+      return;
+    }
+
+    await submitOrder();
+  }
+
+  function drawQR() {
+    // Simple QR placeholder visual (real QR would use a library)
+    const canvas = document.getElementById('qr-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 200, 200);
+    ctx.fillStyle = '#000000';
+
+    // Generate simple pattern to look like QR
+    const size = 10;
+    const data = btoa('upi://pay?pa=maanmeal@upi&am=' + (cartData ? cartData.total : 0));
+    for (let i = 0; i < 20; i++) {
+      for (let j = 0; j < 20; j++) {
+        if (data.charCodeAt((i * 20 + j) % data.length) % 2 === 0) {
+          ctx.fillRect(i * size, j * size, size, size);
+        }
+      }
+    }
+    // Corner markers
+    [[0,0],[0,14],[14,0]].forEach(([x,y])=>{
+      ctx.strokeStyle='#000';ctx.lineWidth=2;
+      ctx.strokeRect(x*size,y*size,6*size,6*size);
+      ctx.fillRect((x+1)*size,(y+1)*size,4*size,4*size);
+    });
+  }
+
+  async function confirmQRPayment() {
+    document.getElementById('qr-modal').classList.add('hidden');
+    await submitOrder();
+  }
+
+  async function submitOrder() {
+    const btn = document.getElementById('place-order-btn');
+    btn.disabled = true; btn.textContent = '⏳ Placing Order...';
+    Loader.show('Processing your order...');
+
+    try {
+      const data = await Api.post('/consumer/orders', {
+        delivery_address: document.getElementById('delivery-address').value,
+        payment_method: selectedPayment,
+        delivery_notes: document.getElementById('delivery-notes').value,
+      });
+      Loader.hide();
+      Toast.show(`Order #${data.order.id} placed! 🎉`, 'success', 'Order Confirmed!', 5000);
+      setTimeout(() => window.location.href = `/frontend/consumer/orders.html?order=${data.order.id}`, 1500);
+    } catch(e) {
+      Loader.hide();
+      Toast.show(e.message || 'Failed to place order', 'error');
+      btn.disabled = false; btn.textContent = '🌾 Place Order';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadCheckout);
+</script>
+</body>
+</html>

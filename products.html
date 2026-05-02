@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Products — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem}
+    .farmer-product-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-md);overflow:hidden;transition:var(--transition)}
+    .farmer-product-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--primary-light)}
+    .prod-img{width:100%;height:160px;object-fit:cover}
+    .prod-body{padding:0.85rem}
+    .prod-actions{display:flex;gap:0.5rem;padding:0.75rem;border-top:1px solid var(--glass-border)}
+    .stock-bar{height:4px;background:var(--glass-border);border-radius:2px;margin-top:6px}
+    .stock-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--primary),var(--primary-light));transition:var(--transition)}
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">🌾 Maan-Meal</div>
+    <a href="/frontend/farmer/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/frontend/farmer/products.html" class="sidebar-link active"><span class="icon">🥦</span> My Products</a>
+    <a href="/frontend/farmer/add-product.html" class="sidebar-link"><span class="icon">➕</span> Add Product</a>
+    <a href="/frontend/farmer/orders.html" class="sidebar-link"><span class="icon">📦</span> Orders</a>
+    <div class="sidebar-section-label" style="margin-top:1rem">Account</div>
+    <a href="#" class="sidebar-link" id="sidebar-logout"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="flex-between">
+        <div>
+          <h1 class="page-title">My Products</h1>
+          <p class="page-subtitle" id="product-count">Loading...</p>
+        </div>
+        <a href="/frontend/farmer/add-product.html"><button class="btn btn-primary">+ Add Product</button></a>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="flex-between mb-3" style="flex-wrap:wrap;gap:1rem">
+        <div class="search-bar" style="max-width:300px">
+          <input type="text" id="search-input" placeholder="Search products..." oninput="filterProducts()">
+          <button>🔍</button>
+        </div>
+        <div class="filter-chips" id="cat-chips">
+          <div class="chip active" onclick="filterCat('')" data-cat="">All</div>
+          <div class="chip" onclick="filterCat('Vegetables')" data-cat="Vegetables">🥦</div>
+          <div class="chip" onclick="filterCat('Fruits')" data-cat="Fruits">🍎</div>
+          <div class="chip" onclick="filterCat('Grains')" data-cat="Grains">🌾</div>
+          <div class="chip" onclick="filterCat('Dairy')" data-cat="Dairy">🥛</div>
+        </div>
+      </div>
+
+      <div class="product-grid" id="products-grid"></div>
+      <div style="display:flex;justify-content:center;margin-top:1.5rem" id="pagination-wrap"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay hidden" id="delete-modal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:1rem">🗑</div>
+    <h3 style="font-weight:800;margin-bottom:0.5rem">Delete Product?</h3>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">This action cannot be undone. The product will be permanently removed.</p>
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn btn-ghost btn-full" onclick="document.getElementById('delete-modal').classList.add('hidden')">Cancel</button>
+      <button class="btn btn-danger btn-full" id="confirm-delete-btn">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (!Auth.requireRole('farmer')) {}
+  document.getElementById('sidebar-logout').addEventListener('click', () => { Auth.clear(); window.location.href = '/frontend/index.html'; });
+
+  let allProducts = [];
+  let currentCat = '';
+  let deleteTargetId = null;
+
+  async function loadProducts() {
+    const grid = document.getElementById('products-grid');
+    grid.innerHTML = Array(6).fill('<div class="skeleton" style="height:280px;border-radius:16px"></div>').join('');
+    try {
+      const data = await Api.get('/farmer/products?per_page=50');
+      allProducts = data.products;
+      document.getElementById('product-count').textContent = `${data.total} products listed`;
+      renderProducts(allProducts);
+    } catch(e) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Failed to load products</p></div>`; }
+  }
+
+  function filterCat(cat) {
+    currentCat = cat;
+    document.querySelectorAll('#cat-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
+    renderProducts(allProducts);
+  }
+
+  function filterProducts() {
+    renderProducts(allProducts);
+  }
+
+  function renderProducts(products) {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    let filtered = products;
+    if (currentCat) filtered = filtered.filter(p => p.category === currentCat);
+    if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search));
+
+    const grid = document.getElementById('products-grid');
+    if (!filtered.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🌾</div><h3>No products found</h3><a href="/frontend/farmer/add-product.html"><button class="btn btn-primary">+ Add Product</button></a></div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(p => {
+      const stockPct = Math.min((p.stock_qty / 200) * 100, 100);
+      return `
+        <div class="farmer-product-card">
+          <div style="position:relative">
+            <img class="prod-img" src="${p.image_url}" alt="${p.name}" onerror="this.src='/frontend/static/uploads/default_product.jpg'">
+            ${p.is_organic ? '<span class="product-badge organic">🌿 Organic</span>' : ''}
+            ${!p.is_available ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center"><span style="background:#ef4444;color:#fff;padding:0.4rem 1rem;border-radius:20px;font-size:0.8rem;font-weight:700">Inactive</span></div>' : ''}
+          </div>
+          <div class="prod-body">
+            <div style="font-weight:700;margin-bottom:2px">${p.name}</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.4rem">${p.category} · ${p.quality_grade} Grade</div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-weight:800;color:var(--harvest)">${Fmt.currency(p.price_per_unit)}/${p.unit}</span>
+              <span style="font-size:0.8rem;color:var(--text-muted)">⭐ ${p.rating} (${p.total_reviews})</span>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Stock: ${p.stock_qty} ${p.unit}</div>
+            <div class="stock-bar"><div class="stock-fill" style="width:${stockPct}%"></div></div>
+          </div>
+          <div class="prod-actions">
+            <a href="/frontend/farmer/add-product.html?edit=${p.id}" style="flex:1"><button class="btn btn-ghost btn-sm w-full">✏️ Edit</button></a>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="confirmDelete(${p.id})">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function confirmDelete(productId) {
+    deleteTargetId = productId;
+    document.getElementById('delete-modal').classList.remove('hidden');
+  }
+
+  document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    const btn = document.getElementById('confirm-delete-btn');
+    btn.disabled = true; btn.textContent = 'Deleting...';
+    try {
+      await Api.delete(`/farmer/products/${deleteTargetId}`);
+      Toast.show('Product deleted', 'success');
+      document.getElementById('delete-modal').classList.add('hidden');
+      loadProducts();
+    } catch(e) { Toast.show(e.message, 'error'); }
+    btn.disabled = false; btn.textContent = 'Yes, Delete';
+    deleteTargetId = null;
+  });
+
+  document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+</body>
+</html>

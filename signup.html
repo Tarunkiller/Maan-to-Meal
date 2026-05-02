@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .auth-layout{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+    .signup-card{background:var(--bg-mid);border:1px solid var(--glass-border);border-radius:var(--radius-xl);padding:2.5rem;width:100%;max-width:560px}
+    .role-tabs{display:flex;background:var(--glass);border-radius:var(--radius-sm);padding:4px;margin-bottom:2rem;border:1px solid var(--glass-border)}
+    .role-tab{flex:1;padding:0.6rem;text-align:center;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.9rem;transition:var(--transition);color:var(--text-muted)}
+    .role-tab.active{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff}
+    .farmer-fields{display:none}
+    .farmer-fields.show{display:block}
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="auth-layout">
+  <div class="signup-card">
+    <a href="/frontend/index.html" style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--text-muted);font-size:0.85rem;margin-bottom:1.5rem">← Back to Home</a>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:3rem;margin-bottom:0.5rem">🌾</div>
+      <h1 style="font-family:'Outfit',sans-serif;font-size:1.8rem;font-weight:800">Create Your Account</h1>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-top:0.25rem">Join thousands on Maan-Meal</p>
+    </div>
+
+    <div class="role-tabs">
+      <div class="role-tab active" id="tab-consumer" onclick="switchRole('consumer')">🛒 Consumer (Buyer)</div>
+      <div class="role-tab" id="tab-farmer" onclick="switchRole('farmer')">🌾 Farmer (Seller)</div>
+    </div>
+
+    <form id="signup-form">
+      <input type="hidden" id="role" value="consumer">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" id="name" class="form-control" placeholder="Rajesh Kumar" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" id="phone" class="form-control" placeholder="9876543210">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input type="email" id="email" class="form-control" placeholder="you@example.com" required autocomplete="email">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input type="password" id="password" class="form-control" placeholder="Min. 6 characters" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password *</label>
+          <input type="password" id="confirm-password" class="form-control" placeholder="Repeat password" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Delivery Address</label>
+        <textarea id="address" class="form-control" rows="2" placeholder="Your home/delivery address"></textarea>
+      </div>
+
+      <!-- Farmer-specific fields -->
+      <div class="farmer-fields" id="farmer-fields">
+        <div class="divider-text"><span>Farm Details</span></div>
+        <div class="form-group">
+          <label class="form-label">Farm Name *</label>
+          <input type="text" id="farm_name" class="form-control" placeholder="e.g. Green Valley Farm">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Farm Location *</label>
+            <input type="text" id="farm_location" class="form-control" placeholder="City, State">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Farm Size</label>
+            <input type="text" id="farm_size" class="form-control" placeholder="e.g. 5 acres">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">About Your Farm</label>
+          <textarea id="farm_description" class="form-control" rows="2" placeholder="What do you grow? Any specialties?"></textarea>
+        </div>
+        <div style="background:rgba(244,162,97,0.1);border:1px solid rgba(244,162,97,0.3);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem">
+          <div style="color:var(--harvest);font-size:0.85rem;font-weight:600">⚠️ Admin Approval Required</div>
+          <div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px">Farmer accounts are reviewed and approved by our admin team within 24 hours.</div>
+        </div>
+      </div>
+
+      <div id="error-msg" class="hidden" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:0.75rem 1rem;border-radius:8px;font-size:0.85rem;margin-bottom:1rem"></div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="submit-btn">Create Account →</button>
+    </form>
+
+    <p style="text-align:center;margin-top:1.25rem;font-size:0.85rem;color:var(--text-muted)">
+      Already have an account? <a href="/frontend/auth/login.html" style="color:var(--primary-light);font-weight:600">Sign In</a>
+    </p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (Auth.isLoggedIn()) window.location.href = '/frontend/index.html';
+
+  // Pre-select role from URL param
+  const urlRole = new URLSearchParams(window.location.search).get('role');
+  if (urlRole === 'farmer') switchRole('farmer');
+
+  function switchRole(role) {
+    document.getElementById('role').value = role;
+    document.getElementById('tab-consumer').classList.toggle('active', role === 'consumer');
+    document.getElementById('tab-farmer').classList.toggle('active', role === 'farmer');
+    document.getElementById('farmer-fields').classList.toggle('show', role === 'farmer');
+
+    // Toggle required for farmer fields
+    ['farm_name','farm_location'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.required = (role === 'farmer');
+    });
+  }
+
+  document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errEl = document.getElementById('error-msg');
+    errEl.classList.add('hidden');
+
+    const pass = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm-password').value;
+    if (pass !== confirm) {
+      errEl.textContent = 'Passwords do not match';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Creating account...';
+
+    const role = document.getElementById('role').value;
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      password: pass,
+      role,
+      phone: document.getElementById('phone').value,
+      address: document.getElementById('address').value,
+    };
+
+    if (role === 'farmer') {
+      payload.farm_name = document.getElementById('farm_name').value.trim();
+      payload.farm_location = document.getElementById('farm_location').value.trim();
+      payload.farm_size = document.getElementById('farm_size').value;
+      payload.farm_description = document.getElementById('farm_description').value;
+    }
+
+    try {
+      const data = await Api.post('/auth/register', payload);
+      Auth.setAuth(data);
+      Toast.show(data.message || 'Account created!', 'success');
+      const redirect = {
+        farmer: '/frontend/farmer/dashboard.html',
+        consumer: '/frontend/consumer/dashboard.html',
+      };
+      setTimeout(() => window.location.href = redirect[role] || '/frontend/index.html', 1000);
+    } catch (err) {
+      errEl.textContent = err.message || 'Registration failed.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Create Account →';
+    }
+  });
+</script>
+</body>
+</html>

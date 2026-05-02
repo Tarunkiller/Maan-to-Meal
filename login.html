@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .auth-layout { min-height:100vh; display:flex; }
+    .auth-left {
+      flex:1; background:linear-gradient(135deg,#0a2a1f,#1B4332);
+      display:flex; align-items:center; justify-content:center; padding:3rem;
+      position:relative; overflow:hidden;
+    }
+    .auth-left::before {
+      content:''; position:absolute; inset:0;
+      background:url('https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=800&q=60') center/cover;
+      opacity:0.15;
+    }
+    .auth-left-content { position:relative; text-align:center; max-width:360px; }
+    .auth-right {
+      flex:0 0 480px; background:var(--bg-mid);
+      display:flex; align-items:center; justify-content:center; padding:3rem 2.5rem;
+    }
+    .auth-form-wrap { width:100%; max-width:380px; }
+    @media (max-width:768px) { .auth-left{display:none;} .auth-right{flex:1;} }
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="auth-layout">
+  <!-- Left Panel -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div style="font-size:5rem;margin-bottom:1rem">🌾</div>
+      <h1 style="font-family:'Outfit',sans-serif;font-size:2.5rem;font-weight:900;margin-bottom:1rem">
+        Welcome Back to <span style="background:linear-gradient(135deg,#52B788,#F4A261);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Maan-Meal</span>
+      </h1>
+      <p style="color:rgba(255,255,255,0.7);line-height:1.8">Fresh farm produce delivered directly from farmers to your doorstep. No middlemen, fair prices.</p>
+      <div style="display:flex;gap:1.5rem;justify-content:center;margin-top:2rem;flex-wrap:wrap">
+        <div style="text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#52B788">500+</div><div style="font-size:0.8rem;color:rgba(255,255,255,0.6)">Farmers</div></div>
+        <div style="text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#F4A261">10K+</div><div style="font-size:0.8rem;color:rgba(255,255,255,0.6)">Customers</div></div>
+        <div style="text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#52B788">24h</div><div style="font-size:0.8rem;color:rgba(255,255,255,0.6)">Delivery</div></div>
+      </div>
+    </div>
+  </div>
+  <!-- Right Panel -->
+  <div class="auth-right">
+    <div class="auth-form-wrap">
+      <a href="/frontend/index.html" style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem">← Back to Home</a>
+      <h2 style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:800;margin-bottom:0.5rem">Sign In</h2>
+      <p style="color:var(--text-muted);margin-bottom:2rem;font-size:0.9rem">Enter your credentials to access your account</p>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-control" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-group">
+            <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+            <button type="button" class="input-group-icon" style="background:none;border:none;cursor:pointer;color:var(--text-muted)" onclick="togglePass()">👁</button>
+          </div>
+        </div>
+
+        <div id="error-msg" class="hidden" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:0.75rem 1rem;border-radius:8px;font-size:0.85rem;margin-bottom:1rem"></div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="submit-btn">Sign In →</button>
+      </form>
+
+      <div class="divider-text" style="margin:1.5rem 0"><span>Quick Demo Login</span></div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="fillDemo('anita@gmail.com','consumer123')">👤 Consumer Demo</button>
+        <button class="btn btn-ghost btn-sm" onclick="fillDemo('rajesh@farm.com','farmer123')">🌾 Farmer Demo</button>
+        <button class="btn btn-ghost btn-sm" onclick="fillDemo('admin@maanmeal.com','admin123')">🛡 Admin Demo</button>
+      </div>
+
+      <p style="text-align:center;margin-top:1.5rem;font-size:0.85rem;color:var(--text-muted)">
+        Don't have an account? <a href="/frontend/auth/signup.html" style="color:var(--primary-light);font-weight:600">Sign Up</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  // Redirect if already logged in
+  if (Auth.isLoggedIn()) {
+    const role = Auth.getRole();
+    const redirect = { farmer: '/frontend/farmer/dashboard.html', consumer: '/frontend/consumer/dashboard.html', admin: '/frontend/admin/dashboard.html' };
+    window.location.href = redirect[role] || '/frontend/index.html';
+  }
+
+  function togglePass() {
+    const p = document.getElementById('password');
+    p.type = p.type === 'password' ? 'text' : 'password';
+  }
+
+  function fillDemo(email, pass) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = pass;
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errEl = document.getElementById('error-msg');
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    errEl.classList.add('hidden');
+
+    try {
+      const data = await Api.post('/auth/login', {
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+      });
+
+      Auth.setAuth(data);
+      Toast.show('Welcome back, ' + data.user.name.split(' ')[0] + '!', 'success');
+
+      // Check approval for farmers
+      if (data.user.role === 'farmer' && !data.user.is_approved) {
+        Toast.show('Your farmer account is pending admin approval.', 'warning', 'Pending Approval', 6000);
+      }
+
+      // Redirect by role
+      const redirect = {
+        farmer: '/frontend/farmer/dashboard.html',
+        consumer: '/frontend/consumer/dashboard.html',
+        admin: '/frontend/admin/dashboard.html'
+      };
+      const target = new URLSearchParams(window.location.search).get('next') || redirect[data.user.role] || '/frontend/index.html';
+      setTimeout(() => window.location.href = target, 800);
+
+    } catch (err) {
+      errEl.textContent = err.message || 'Login failed. Please try again.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Sign In →';
+    }
+  });
+</script>
+</body>
+</html>

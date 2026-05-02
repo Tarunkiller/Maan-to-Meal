@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Management — Admin — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .farmer-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:1.25rem;display:flex;align-items:flex-start;gap:1rem;transition:var(--transition);margin-bottom:1rem}
+    .farmer-card:hover{background:var(--bg-card-hover)}
+    .farmer-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;flex-shrink:0}
+    .pending-count-badge{background:rgba(244,162,97,0.2);border:1px solid rgba(244,162,97,0.3);color:var(--harvest);padding:0.2rem 0.75rem;border-radius:20px;font-size:0.82rem;font-weight:700}
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">🛡 Admin Panel</div>
+    <a href="/frontend/admin/dashboard.html" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+    <a href="/frontend/admin/farmers.html" class="sidebar-link active"><span class="icon">🌾</span> Farmers</a>
+    <a href="/frontend/admin/orders.html" class="sidebar-link"><span class="icon">📦</span> Orders</a>
+    <a href="/frontend/admin/users.html" class="sidebar-link"><span class="icon">👥</span> Users</a>
+    <div class="sidebar-section-label" style="margin-top:1rem">Account</div>
+    <a href="#" class="sidebar-link" id="sidebar-logout"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">🌾 Farmer Management</h1>
+      <p class="page-subtitle">Approve registrations and manage farmer accounts</p>
+    </div>
+
+    <div class="content-area">
+      <!-- Pending Approvals Section -->
+      <div class="card mb-4">
+        <div class="flex-between mb-3">
+          <h3 style="font-weight:700">⏳ Pending Approvals <span class="pending-count-badge" id="pending-count">0</span></h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadPending()">🔄 Refresh</button>
+        </div>
+        <div id="pending-farmers"></div>
+      </div>
+
+      <!-- All Farmers -->
+      <div>
+        <div class="flex-between mb-3" style="flex-wrap:wrap;gap:1rem">
+          <h3 style="font-weight:700">All Farmers</h3>
+          <div class="search-bar" style="max-width:280px">
+            <input type="text" id="search-input" placeholder="Search farmers..." oninput="debounceSearch()">
+            <button>🔍</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Farmer</th><th>Farm</th><th>Location</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody id="farmers-table"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:1.5rem" id="pagination-wrap"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (!Auth.requireRole('admin')) {}
+  document.getElementById('sidebar-logout').addEventListener('click', () => { Auth.clear(); window.location.href = '/frontend/index.html'; });
+
+  let searchTimer;
+
+  async function loadPending() {
+    const container = document.getElementById('pending-farmers');
+    try {
+      const data = await Api.get('/admin/farmers/pending');
+      document.getElementById('pending-count').textContent = data.farmers.length;
+      if (!data.farmers.length) {
+        container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><div class="empty-icon" style="font-size:2rem">✅</div><p>No pending approvals! All farmers are reviewed.</p></div>`;
+        return;
+      }
+      container.innerHTML = data.farmers.map(f => buildFarmerCard(f, true)).join('');
+    } catch(e) { Toast.show('Failed to load pending farmers', 'error'); }
+  }
+
+  function buildFarmerCard(f, isPending = false) {
+    const fp = f.farmer_profile;
+    const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return `
+      <div class="farmer-card" id="farmer-card-${f.id}">
+        <div class="farmer-avatar">${initials}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;margin-bottom:2px">${f.name}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">${f.email} · ${f.phone || '—'}</div>
+          ${fp ? `<div style="font-size:0.85rem">🏡 <strong>${fp.farm_name}</strong> · 📍 ${fp.farm_location} · 🌾 ${fp.farm_size || 'Not specified'}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px">${fp.description || ''}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
+          <div>${f.is_approved ? '<span class="badge badge-success">✅ Approved</span>' : '<span class="badge badge-warning">⏳ Pending</span>'}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">${Fmt.date(f.created_at)}</div>
+          ${isPending ? `
+            <div style="display:flex;gap:0.5rem">
+              <button class="btn btn-primary btn-sm" onclick="approveFarmer(${f.id})">✅ Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="rejectFarmer(${f.id})">✕ Reject</button>
+            </div>` : `
+            <button class="btn btn-ghost btn-sm" onclick="toggleFarmerStatus(${f.id}, ${!f.is_active})" style="color:${f.is_active?'var(--danger)':'var(--success)'}">
+              ${f.is_active ? 'Deactivate' : 'Activate'}
+            </button>`}
+        </div>
+      </div>`;
+  }
+
+  async function approveFarmer(id) {
+    try {
+      await Api.put(`/admin/farmers/${id}/approve`);
+      Toast.show('Farmer approved! They can now sell on Maan-Meal.', 'success');
+      loadPending(); loadFarmers();
+    } catch(e) { Toast.show(e.message, 'error'); }
+  }
+
+  async function rejectFarmer(id) {
+    if (!confirm('Reject and deactivate this farmer account?')) return;
+    try {
+      await Api.put(`/admin/farmers/${id}/reject`);
+      Toast.show('Farmer rejected', 'warning');
+      loadPending(); loadFarmers();
+    } catch(e) { Toast.show(e.message, 'error'); }
+  }
+
+  async function toggleFarmerStatus(userId, newState) {
+    try {
+      await Api.put(`/admin/users/${userId}/toggle`);
+      Toast.show(`Farmer ${newState ? 'activated' : 'deactivated'}`, newState ? 'success' : 'warning');
+      loadFarmers();
+    } catch(e) { Toast.show(e.message, 'error'); }
+  }
+
+  let currentPage = 1;
+  function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(loadFarmers, 500); }
+
+  async function loadFarmers() {
+    const tbody = document.getElementById('farmers-table');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>';
+    const params = new URLSearchParams({ page: currentPage, per_page: 20 });
+    const s = document.getElementById('search-input').value;
+    if (s) params.append('search', s);
+    try {
+      const data = await Api.get(`/admin/farmers?${params}`);
+      if (!data.farmers.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem">No farmers found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.farmers.map(f => {
+        const fp = f.farmer_profile;
+        return `
+          <tr>
+            <td><div style="font-weight:700">${f.name}</div><div style="font-size:0.78rem;color:var(--text-muted)">${f.email}</div></td>
+            <td>${fp ? fp.farm_name : '—'}</td>
+            <td style="font-size:0.85rem">${fp ? fp.farm_location : '—'}</td>
+            <td>${f.is_approved && f.is_active ? '<span class="badge badge-success">Active</span>' : (f.is_approved ? '<span class="badge badge-warning">Inactive</span>' : '<span class="badge badge-warning">Pending</span>')}</td>
+            <td style="font-size:0.82rem;color:var(--text-muted)">${Fmt.date(f.created_at)}</td>
+            <td>
+              ${!f.is_approved ? `<button class="btn btn-primary btn-sm" onclick="approveFarmer(${f.id})">✅ Approve</button>` : ''}
+              <button class="btn btn-ghost btn-sm" style="color:${f.is_active?'var(--danger)':'var(--success)'}" onclick="toggleFarmerStatus(${f.id}, ${!f.is_active})">${f.is_active?'Deactivate':'Activate'}</button>
+            </td>
+          </tr>`;
+      }).join('');
+      renderPagination(data.pages, data.page);
+    } catch(e) { Toast.show('Failed to load farmers', 'error'); }
+  }
+
+  function renderPagination(pages, current) {
+    const wrap = document.getElementById('pagination-wrap');
+    if (pages <= 1) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `<div class="pagination">
+      <button class="page-btn" ${current===1?'disabled':''} onclick="currentPage=${current-1};loadFarmers()">←</button>
+      ${Array.from({length:pages},(_,i)=>`<button class="page-btn ${i+1===current?'active':''}" onclick="currentPage=${i+1};loadFarmers()">${i+1}</button>`).join('')}
+      <button class="page-btn" ${current===pages?'disabled':''} onclick="currentPage=${current+1};loadFarmers()">→</button>
+    </div>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { loadPending(); loadFarmers(); });
+</script>
+</body>
+</html>

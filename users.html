@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management — Admin — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">🛡 Admin Panel</div>
+    <a href="/frontend/admin/dashboard.html" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+    <a href="/frontend/admin/farmers.html" class="sidebar-link"><span class="icon">🌾</span> Farmers</a>
+    <a href="/frontend/admin/orders.html" class="sidebar-link"><span class="icon">📦</span> Orders</a>
+    <a href="/frontend/admin/users.html" class="sidebar-link active"><span class="icon">👥</span> Users</a>
+    <div class="sidebar-section-label" style="margin-top:1rem">Account</div>
+    <a href="#" class="sidebar-link" id="sidebar-logout"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">👥 User Management</h1>
+      <p class="page-subtitle">Manage all platform users</p>
+    </div>
+
+    <div class="content-area">
+      <div class="flex-between mb-3" style="flex-wrap:wrap;gap:1rem">
+        <div class="filter-chips">
+          <div class="chip active" onclick="filterRole('')" data-role="">All</div>
+          <div class="chip" onclick="filterRole('consumer')" data-role="consumer">🛒 Consumers</div>
+          <div class="chip" onclick="filterRole('farmer')" data-role="farmer">🌾 Farmers</div>
+          <div class="chip" onclick="filterRole('admin')" data-role="admin">🛡 Admins</div>
+        </div>
+        <div class="search-bar" style="max-width:280px">
+          <input type="text" id="search-input" placeholder="Search by name or email..." oninput="debounceSearch()">
+          <button>🔍</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Role</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-table"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:1.5rem" id="pagination-wrap"></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (!Auth.requireRole('admin')) {}
+  document.getElementById('sidebar-logout').addEventListener('click', () => { Auth.clear(); window.location.href = '/frontend/index.html'; });
+
+  let currentRole = '', currentPage = 1, searchTimer;
+
+  function filterRole(role) {
+    currentRole = role; currentPage = 1;
+    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.role === role));
+    loadUsers();
+  }
+
+  function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(loadUsers, 500); }
+
+  async function loadUsers() {
+    const tbody = document.getElementById('users-table');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></td></tr>';
+    const params = new URLSearchParams({ page: currentPage, per_page: 20 });
+    if (currentRole) params.append('role', currentRole);
+    const s = document.getElementById('search-input').value;
+    if (s) params.append('search', s);
+    try {
+      const data = await Api.get(`/admin/users?${params}`);
+      if (!data.users.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem">No users found</td></tr>';
+        return;
+      }
+      const roleIcons = { farmer: '🌾', consumer: '🛒', admin: '🛡' };
+      const roleBadge = { farmer: 'badge-primary', consumer: 'badge-info', admin: 'badge-warning' };
+      tbody.innerHTML = data.users.map(u => `
+        <tr>
+          <td>
+            <div style="font-weight:700">${u.name}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${u.email}</div>
+          </td>
+          <td><span class="badge ${roleBadge[u.role]}">${roleIcons[u.role] || ''} ${u.role}</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">${u.phone || '—'}</td>
+          <td>${u.is_active && (u.role !== 'farmer' || u.is_approved) ?
+            '<span class="badge badge-success">Active</span>' :
+            (u.is_active ? '<span class="badge badge-warning">Pending Approval</span>' : '<span class="badge badge-danger">Inactive</span>')}
+          </td>
+          <td style="font-size:0.8rem;color:var(--text-muted)">${Fmt.date(u.created_at)}</td>
+          <td>
+            ${u.role !== 'admin' ? `
+            <button class="btn btn-ghost btn-sm" style="color:${u.is_active?'var(--danger)':'var(--success)'}" onclick="toggleUser(${u.id}, this)">
+              ${u.is_active ? 'Deactivate' : 'Activate'}
+            </button>` : '<span style="color:var(--text-muted);font-size:0.8rem">Protected</span>'}
+          </td>
+        </tr>`).join('');
+      renderPagination(data.pages, data.page);
+    } catch(e) { Toast.show('Failed to load users', 'error'); }
+  }
+
+  async function toggleUser(userId, btn) {
+    btn.disabled = true;
+    try {
+      const data = await Api.put(`/admin/users/${userId}/toggle`);
+      Toast.show(`User ${data.user.is_active ? 'activated' : 'deactivated'}`, data.user.is_active ? 'success' : 'warning');
+      loadUsers();
+    } catch(e) { Toast.show(e.message, 'error'); btn.disabled = false; }
+  }
+
+  function renderPagination(pages, current) {
+    const wrap = document.getElementById('pagination-wrap');
+    if (pages <= 1) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `<div class="pagination">
+      <button class="page-btn" ${current===1?'disabled':''} onclick="currentPage=${current-1};loadUsers()">←</button>
+      ${Array.from({length:Math.min(pages,10)},(_,i)=>`<button class="page-btn ${i+1===current?'active':''}" onclick="currentPage=${i+1};loadUsers()">${i+1}</button>`).join('')}
+      <button class="page-btn" ${current===pages?'disabled':''} onclick="currentPage=${current+1};loadUsers()">→</button>
+    </div>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+</body>
+</html>

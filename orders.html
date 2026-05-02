@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders — Farmer — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+  <style>
+    .order-row{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1rem;transition:var(--transition)}
+    .order-row:hover{background:var(--bg-card-hover)}
+    .status-select{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:0.4rem 0.75rem;color:var(--text-primary);cursor:pointer;font-size:0.85rem;outline:none}
+  </style>
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">🌾 Maan-Meal</div>
+    <a href="/frontend/farmer/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/frontend/farmer/products.html" class="sidebar-link"><span class="icon">🥦</span> My Products</a>
+    <a href="/frontend/farmer/add-product.html" class="sidebar-link"><span class="icon">➕</span> Add Product</a>
+    <a href="/frontend/farmer/orders.html" class="sidebar-link active"><span class="icon">📦</span> Orders</a>
+    <div class="sidebar-section-label" style="margin-top:1rem">Account</div>
+    <a href="#" class="sidebar-link" id="sidebar-logout"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">📦 Orders</h1>
+      <p class="page-subtitle">Manage and fulfill incoming orders</p>
+    </div>
+
+    <div class="content-area">
+      <div class="filter-chips mb-3">
+        <div class="chip active" onclick="filterOrders('')" data-status="">All</div>
+        <div class="chip" onclick="filterOrders('confirmed')" data-status="confirmed">✅ New</div>
+        <div class="chip" onclick="filterOrders('processing')" data-status="processing">🔄 Processing</div>
+        <div class="chip" onclick="filterOrders('shipped')" data-status="shipped">📦 Shipped</div>
+        <div class="chip" onclick="filterOrders('delivered')" data-status="delivered">✔ Delivered</div>
+      </div>
+
+      <div id="orders-container"></div>
+      <div style="display:flex;justify-content:center;margin-top:1.5rem" id="pagination-wrap"></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (!Auth.requireRole('farmer')) {}
+  document.getElementById('sidebar-logout').addEventListener('click', () => { Auth.clear(); window.location.href = '/frontend/index.html'; });
+
+  let currentStatus = '';
+  let currentPage = 1;
+
+  const NEXT_STATUS = {
+    confirmed: 'processing', processing: 'shipped',
+    shipped: 'out_for_delivery', out_for_delivery: 'delivered'
+  };
+  const NEXT_LABEL = {
+    confirmed: '🔄 Start Processing', processing: '📦 Mark as Shipped',
+    shipped: '🚚 Out for Delivery', out_for_delivery: '✔ Mark Delivered'
+  };
+
+  function filterOrders(status) {
+    currentStatus = status; currentPage = 1;
+    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.status === status));
+    loadOrders();
+  }
+
+  async function loadOrders() {
+    const container = document.getElementById('orders-container');
+    container.innerHTML = Array(3).fill('<div class="skeleton" style="height:140px;border-radius:16px;margin-bottom:1rem"></div>').join('');
+    const params = new URLSearchParams({ page: currentPage, per_page: 15 });
+    if (currentStatus) params.append('status', currentStatus);
+    try {
+      const data = await Api.get(`/farmer/orders?${params}`);
+      if (!data.orders.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No orders found</h3></div>`;
+        return;
+      }
+      container.innerHTML = '';
+      data.orders.forEach(o => {
+        const div = document.createElement('div');
+        div.className = 'order-row';
+        const nextStatus = NEXT_STATUS[o.status];
+        div.innerHTML = `
+          <div class="flex-between" style="margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+            <div>
+              <div style="font-weight:800;font-size:1rem">Order #${o.id}</div>
+              <div style="font-size:0.8rem;color:var(--text-muted)">${Fmt.datetime(o.created_at)} · 📍 ${(o.delivery_address || '').substring(0, 50)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              ${Fmt.status(o.status)}
+              <div style="font-weight:800;color:var(--harvest)">${Fmt.currency(o.total_amount)}</div>
+            </div>
+          </div>
+          <div style="margin-bottom:1rem">
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:600">ITEMS</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              ${(o.items || []).map(item => `
+                <div style="display:flex;align-items:center;gap:0.5rem;background:var(--glass);padding:0.4rem 0.75rem;border-radius:20px;font-size:0.82rem">
+                  <img src="${item.product_image || '/frontend/static/uploads/default_product.jpg'}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.src='/frontend/static/uploads/default_product.jpg'">
+                  ${item.product_name} × ${item.quantity}
+                </div>`).join('')}
+            </div>
+          </div>
+          <div class="flex-between" style="flex-wrap:wrap;gap:0.5rem">
+            <div style="font-size:0.82rem;color:var(--text-muted)">
+              👤 ${o.consumer_name || '—'} · 📞 ${o.consumer_phone || '—'}<br>
+              💳 ${o.payment_method?.toUpperCase()} · <span style="color:${o.payment_status==='paid'?'var(--success)':'var(--warning)'}">Payment: ${o.payment_status}</span>
+            </div>
+            <div style="display:flex;gap:0.5rem">
+              ${nextStatus && o.status !== 'cancelled' && o.status !== 'delivered' ?
+                `<button class="btn btn-primary btn-sm" onclick="updateStatus(${o.id}, '${nextStatus}', this)">${NEXT_LABEL[o.status] || 'Update'}</button>` : ''}
+            </div>
+          </div>`;
+        container.appendChild(div);
+      });
+
+      renderPagination(data.pages, data.page);
+    } catch(e) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Failed to load orders</h3><p>${e.message}</p></div>`;
+    }
+  }
+
+  async function updateStatus(orderId, newStatus, btn) {
+    btn.disabled = true; btn.textContent = '⏳ Updating...';
+    try {
+      await Api.put(`/farmer/orders/${orderId}/status`, { status: newStatus });
+      Toast.show(`Order #${orderId} updated to ${newStatus.replace('_',' ')}`, 'success');
+      loadOrders();
+    } catch(e) { Toast.show(e.message, 'error'); btn.disabled = false; btn.textContent = 'Update'; }
+  }
+
+  function renderPagination(pages, current) {
+    const wrap = document.getElementById('pagination-wrap');
+    if (pages <= 1) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `<div class="pagination">
+      <button class="page-btn" ${current===1?'disabled':''} onclick="goPage(${current-1})">←</button>
+      ${Array.from({length:pages},(_,i)=>`<button class="page-btn ${i+1===current?'active':''}" onclick="goPage(${i+1})">${i+1}</button>`).join('')}
+      <button class="page-btn" ${current===pages?'disabled':''} onclick="goPage(${current+1})">→</button>
+    </div>`;
+  }
+  function goPage(p) { currentPage = p; loadOrders(); }
+
+  document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+</body>
+</html>

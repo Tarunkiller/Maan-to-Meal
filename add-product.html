@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Product — Maan-Meal</title>
+  <link rel="stylesheet" href="/frontend/css/style.css">
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">🌾 Maan-Meal</div>
+    <a href="/frontend/farmer/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/frontend/farmer/products.html" class="sidebar-link"><span class="icon">🥦</span> My Products</a>
+    <a href="/frontend/farmer/add-product.html" class="sidebar-link active"><span class="icon">➕</span> Add Product</a>
+    <a href="/frontend/farmer/orders.html" class="sidebar-link"><span class="icon">📦</span> Orders</a>
+    <div class="sidebar-section-label" style="margin-top:1rem">Account</div>
+    <a href="#" class="sidebar-link" id="sidebar-logout"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title" id="page-heading">Add New Product</h1>
+      <p class="page-subtitle">List your fresh produce on the marketplace</p>
+    </div>
+
+    <div class="content-area">
+      <div style="max-width:800px">
+        <form id="product-form">
+          <input type="hidden" id="product-id" value="">
+
+          <div class="grid-2 gap-3 mb-3">
+            <!-- Left -->
+            <div>
+              <div class="card">
+                <h3 style="font-weight:700;margin-bottom:1.25rem">Basic Information</h3>
+                <div class="form-group">
+                  <label class="form-label">Product Name *</label>
+                  <input type="text" id="name" class="form-control" placeholder="e.g. Fresh Tomatoes" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Category *</label>
+                  <select id="category" class="form-control" required>
+                    <option value="">Select Category</option>
+                    <option>Vegetables</option><option>Fruits</option><option>Grains</option>
+                    <option>Dairy</option><option>Herbs</option><option>Pulses</option>
+                    <option>Spices</option><option>Organic</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <textarea id="description" class="form-control" rows="3" placeholder="Tell buyers about your product — freshness, how it's grown, taste..."></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Price (₹) *</label>
+                    <input type="number" id="price_per_unit" class="form-control" placeholder="0.00" min="0" step="0.5" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Unit *</label>
+                    <select id="unit" class="form-control" required>
+                      <option value="kg">kg</option>
+                      <option value="g">grams</option>
+                      <option value="litre">litre</option>
+                      <option value="piece">piece</option>
+                      <option value="dozen">dozen</option>
+                      <option value="bunch">bunch</option>
+                      <option value="500g">500g</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Stock Quantity *</label>
+                    <input type="number" id="stock_qty" class="form-control" placeholder="0" min="0" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Quality Grade</label>
+                    <select id="quality_grade" class="form-control">
+                      <option value="A">A Grade</option>
+                      <option value="B">B Grade</option>
+                      <option value="Premium">Premium</option>
+                      <option value="Standard">Standard</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right -->
+            <div>
+              <div class="card mb-3">
+                <h3 style="font-weight:700;margin-bottom:1.25rem">Product Image</h3>
+                <div class="upload-area" id="upload-area" onclick="document.getElementById('image-input').click()">
+                  <div id="upload-placeholder">
+                    <div style="font-size:3rem;margin-bottom:0.5rem">📷</div>
+                    <div style="font-weight:600;margin-bottom:0.25rem">Click to upload image</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted)">PNG, JPG, WEBP up to 16MB</div>
+                  </div>
+                  <img id="image-preview" class="upload-preview hidden" alt="Preview">
+                </div>
+                <input type="file" id="image-input" accept="image/*" style="display:none" onchange="previewImage(this)">
+              </div>
+
+              <div class="card">
+                <h3 style="font-weight:700;margin-bottom:1.25rem">Additional Details</h3>
+                <div class="form-group">
+                  <label class="form-label">Harvest Date</label>
+                  <input type="date" id="harvest_date" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Fresh for (days)</label>
+                  <input type="number" id="expiry_days" class="form-control" value="7" min="1">
+                </div>
+                <div class="form-group">
+                  <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer">
+                    <input type="checkbox" id="is_organic" style="width:18px;height:18px;accent-color:var(--primary-light)">
+                    <span><strong>🌿 Certified Organic</strong><br><span style="font-size:0.8rem;color:var(--text-muted)">Show organic badge on listing</span></span>
+                  </label>
+                </div>
+                <div class="form-group" id="availability-row" style="display:none">
+                  <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer">
+                    <input type="checkbox" id="is_available" checked style="width:18px;height:18px;accent-color:var(--primary-light)">
+                    <span><strong>Available for Sale</strong><br><span style="font-size:0.8rem;color:var(--text-muted)">Toggle to hide/show listing</span></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="error-msg" class="hidden" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem"></div>
+
+          <div style="display:flex;gap:1rem">
+            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">🌾 List Product</button>
+            <a href="/frontend/farmer/products.html"><button type="button" class="btn btn-ghost btn-lg">Cancel</button></a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/frontend/js/app.js"></script>
+<script>
+  if (!Auth.requireRole('farmer')) {}
+  document.getElementById('sidebar-logout').addEventListener('click', () => { Auth.clear(); window.location.href = '/frontend/index.html'; });
+
+  // Edit mode
+  const editId = new URLSearchParams(window.location.search).get('edit');
+  if (editId) {
+    document.getElementById('page-heading').textContent = 'Edit Product';
+    document.getElementById('product-id').value = editId;
+    document.getElementById('availability-row').style.display = 'block';
+    loadProduct(editId);
+  }
+  // Set today as default harvest date
+  document.getElementById('harvest_date').value = new Date().toISOString().split('T')[0];
+
+  async function loadProduct(id) {
+    try {
+      const p = await Api.get(`/products/${id}`);
+      document.getElementById('name').value = p.name;
+      document.getElementById('category').value = p.category;
+      document.getElementById('description').value = p.description || '';
+      document.getElementById('price_per_unit').value = p.price_per_unit;
+      document.getElementById('unit').value = p.unit;
+      document.getElementById('stock_qty').value = p.stock_qty;
+      document.getElementById('quality_grade').value = p.quality_grade;
+      document.getElementById('expiry_days').value = p.expiry_days;
+      document.getElementById('is_organic').checked = p.is_organic;
+      document.getElementById('is_available').checked = p.is_available;
+      if (p.harvest_date) document.getElementById('harvest_date').value = p.harvest_date;
+      if (p.image_url) {
+        const prev = document.getElementById('image-preview');
+        prev.src = p.image_url; prev.classList.remove('hidden');
+        document.getElementById('upload-placeholder').style.display = 'none';
+      }
+    } catch(e) { Toast.show('Failed to load product', 'error'); }
+  }
+
+  function previewImage(input) {
+    if (!input.files.length) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const prev = document.getElementById('image-preview');
+      prev.src = e.target.result; prev.classList.remove('hidden');
+      document.getElementById('upload-placeholder').style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  // Drag and drop
+  const uploadArea = document.getElementById('upload-area');
+  uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault(); uploadArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      document.getElementById('image-input').files = e.dataTransfer.files;
+      previewImage(document.getElementById('image-input'));
+    }
+  });
+
+  document.getElementById('product-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errEl = document.getElementById('error-msg');
+    btn.disabled = true; btn.textContent = 'Saving...'; errEl.classList.add('hidden');
+
+    const formData = new FormData();
+    const fields = ['name', 'category', 'description', 'price_per_unit', 'unit', 'stock_qty', 'quality_grade', 'expiry_days', 'harvest_date'];
+    fields.forEach(f => { const el = document.getElementById(f); if (el) formData.append(f, el.value); });
+    formData.append('is_organic', document.getElementById('is_organic').checked);
+    if (editId) formData.append('is_available', document.getElementById('is_available').checked);
+    const imageFile = document.getElementById('image-input').files[0];
+    if (imageFile) formData.append('image', imageFile);
+
+    try {
+      const productId = document.getElementById('product-id').value;
+      let res;
+      if (productId) {
+        res = await Api.putForm(`/farmer/products/${productId}`, formData);
+        Toast.show('Product updated!', 'success');
+      } else {
+        res = await Api.postForm('/farmer/products', formData);
+        Toast.show('Product listed successfully! 🎉', 'success');
+      }
+      setTimeout(() => window.location.href = '/frontend/farmer/products.html', 1000);
+    } catch(err) {
+      errEl.textContent = err.message || 'Failed to save product';
+      errEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = editId ? 'Update Product' : '🌾 List Product';
+    }
+  });
+</script>
+</body>
+</html>
